@@ -1,0 +1,35 @@
+[project]
+name = "screenplay-agent"
+version = "0.1.0"
+description = "ClickHouse-native screenplay structural-map agent (ADK + Gemini/Vertex AI)"
+readme = "README.md"
+# ADK's transitive stack is happiest on 3.10-3.12; pin away from bleeding-edge 3.13/3.14.
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "google-adk>=1.0.0",
+    "google-cloud-aiplatform[agent_engines]>=1.101.0",
+    # MCP client used by ADK. Pinned <2 because google-adk requires mcp>=1.24,<2.
+    # The ClickHouse MCP *server* (mcp-clickhouse) is NOT installed here — it runs as a
+    # separate subprocess in its own env via `uvx`, so its mcp-2/fastmcp stack can't
+    # conflict with the client's mcp-1 stack. See screenplay_agent/config.py.
+    "mcp>=1.24,<2",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "pydantic>=2.7.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["screenplay_agent"]
