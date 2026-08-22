@@ -9,6 +9,14 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from dotenv import load_dotenv
+
+# Populates os.environ from a local .env before anything reads it — including the
+# google-genai SDK's own internal lookups (GOOGLE_GENAI_USE_VERTEXAI etc.), which happen
+# outside this module's control. A no-op (no error) when no .env file is present, e.g. in
+# a deployed environment where real env vars are injected instead.
+load_dotenv()
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -39,6 +47,10 @@ class Settings:
             "CLICKHOUSE_PASSWORD": self.ch_password,
             "CLICKHOUSE_SECURE": "true" if self.ch_secure else "false",
             "CLICKHOUSE_DATABASE": self.ch_database,
+            # ClickHouse Cloud's cheapest tier auto-suspends when idle and can take
+            # 20-30s to wake on the first query of a session. Default (30s) query
+            # timeout cuts that off right at the edge; 60s gives it headroom.
+            "CLICKHOUSE_MCP_QUERY_TIMEOUT": "60",
         }
 
 

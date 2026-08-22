@@ -38,8 +38,8 @@ def _text(value):
 def test_extracts_sql_data_and_answer():
     events = [
         _event(_text("Let me check the data...")),
-        _event(_call("run_select_query", {"query": "SELECT avg(conflict) FROM script_nodes WHERE level=0"})),
-        _event(_response("run_select_query", {"rows": [[0.607]]})),
+        _event(_call("run_query",{"query": "SELECT avg(conflict) FROM script_nodes WHERE level=0"})),
+        _event(_response("run_query",{"rows": [[0.607]]})),
         _event(_text("The average conflict across scenes is 0.61.")),
     ]
 
@@ -53,8 +53,8 @@ def test_extracts_sql_data_and_answer():
 
 def test_multiple_queries_are_all_captured():
     events = [
-        _event(_call("run_select_query", {"query": "SELECT 1"})),
-        _event(_call("run_select_query", {"sql": "SELECT 2"})),  # alt arg key
+        _event(_call("run_query",{"query": "SELECT 1"})),
+        _event(_call("run_query",{"sql": "SELECT 2"})),  # alt arg key
         _event(_text("done")),
     ]
     reply = extract_reply(events)

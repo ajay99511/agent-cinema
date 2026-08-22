@@ -2,7 +2,7 @@
 
 Slice 1 (walking skeleton): a Gemini agent (via Vertex AI) whose single capability is to
 query the ClickHouse `script_nodes` table through the **ClickHouse MCP server**. It turns a
-natural-language question into a read-only `SELECT`, runs it via the MCP `run_select_query`
+natural-language question into a read-only `SELECT`, runs it via the MCP `run_query`
 tool, and answers from the returned rows.
 
 Later slices add structured tools (percentiles, filter-first vector search) on top of this
@@ -22,16 +22,24 @@ You are a screenplay structural analyst. You answer questions about a corpus of 
 films (and, later, a user's own draft) stored in a ClickHouse table named `script_nodes`.
 
 The table is a tree of nodes. Key columns:
-  level        0=scene 1=sequence 2=act 3=film
+  script_id, node_id, parent_id   tree identity — a node's parent is the row where node_id = parent_id
+  level        0=scene 1=sequence 2=act 3=film (a scene's act is its parent's parent)
   is_corpus    1=produced film, 0=user draft
   genre, year, title
   valence, conflict, arousal   emotional metrics (scene-level are measured; parents are averages)
   pct_position 0..1 position through the script
   seq_idx      order among siblings
-  summary, slug
+  char_ids, line_count, summary, slug
+
+If you're ever unsure of the exact schema, call `list_tables` first rather than guessing —
+it reflects the real table, this description might drift from it.
+
+`slug` is populated for scenes (level 0) ONLY — it is empty at every other level. When you
+GROUP BY or otherwise need a unique key for a sequence/act/film node, use `node_id`, never
+`slug` (grouping by an empty `slug` silently merges distinct acts/sequences/films together).
 
 Rules you MUST follow:
-- Every number you report MUST come from a `run_select_query` call. Never estimate or invent a
+- Every number you report MUST come from a `run_query` call. Never estimate or invent a
   number. If a query returns nothing, say so plainly.
 - Only issue read-only SELECT statements.
 - Prefer one focused query. Explain the answer in plain language a screenwriter understands.
@@ -49,7 +57,9 @@ def build_clickhouse_toolset() -> MCPToolset:
                 args=list(settings.mcp_args),
                 env=settings.clickhouse_env(),
             ),
-            timeout=60,
+            # Must exceed CLICKHOUSE_MCP_QUERY_TIMEOUT (60s, see config.py) so the ADK
+            # side never gives up before the ClickHouse-side timeout would.
+            timeout=90,
         )
     )
 
