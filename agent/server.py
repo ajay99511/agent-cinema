@@ -11,6 +11,14 @@ from __future__ import annotations
 
 import uuid
 
+from dotenv import load_dotenv
+
+# MUST run before `screenplay_agent.agent` is imported: that module builds `root_agent`
+# at import time, and the google-genai SDK reads GOOGLE_GENAI_USE_VERTEXAI /
+# GOOGLE_CLOUD_PROJECT / GOOGLE_CLOUD_LOCATION straight from the process environment —
+# values from `.env` don't exist there until dotenv puts them there.
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from google.adk.runners import Runner

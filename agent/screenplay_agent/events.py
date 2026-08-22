@@ -16,9 +16,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-# The ClickHouse MCP server exposes its read-only query tool under this name.
-SQL_TOOL_NAME = "run_select_query"
-# The argument that carries the SQL text.
+# The ClickHouse MCP server (mcp-clickhouse) registers its query tool as "run_query"
+# (see mcp_clickhouse/mcp_server.py: Tool.from_function(run_query_async, name="run_query")).
+# It runs read-only by default unless CLICKHOUSE_ALLOW_WRITE_ACCESS is set, which we never set.
+SQL_TOOL_NAME = "run_query"
+# The argument that carries the SQL text (`def run_query(query: str)`).
 SQL_ARG_KEYS = ("query", "sql")
 
 
@@ -51,7 +53,7 @@ def _sql_from_call(args: Any) -> str | None:
 def extract_reply(events: Iterable[Any]) -> AgentReply:
     """Fold a sequence of ADK events into the UI contract.
 
-    - Collects SQL from every ``run_select_query`` function call.
+    - Collects SQL from every ``run_query`` function call.
     - Collects the response payload from every matching function response.
     - Uses the last non-empty run of model text as the final answer, so intermediate
       "let me check..." chatter doesn't leak into the answer.

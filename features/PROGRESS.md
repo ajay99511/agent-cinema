@@ -14,8 +14,8 @@
 | **Track** | ClickHouse · **AI = Google only** (Vertex/Gemini) · **ClickHouse queried at runtime via MCP** |
 | **Deadline** | **Submit by Sept 7, 2026, 2:00pm PT** (site's Sept 9 is unverified — don't trust it) |
 | **Runway** | ~17 days from 2026-08-21, part-time ~2–3 hrs/day |
-| **Current phase** | 🟳 **Slice 1 — Walking skeleton** (code done + offline-verified; live round-trip pending creds) |
-| **Overall status** | 🟢 Building — Slice 1 code complete, blocked only on cloud creds for live verify |
+| **Current phase** | ✅ **Slice 1 — Walking skeleton COMPLETE** (live round-trip verified end-to-end, locally) → next: Slice 2 |
+| **Overall status** | 🟢 Building — fatal integration risk retired with real evidence. Not yet cloud-deployed (still local). |
 
 ---
 
@@ -25,7 +25,7 @@ Legend: ⬜ not started · 🟳 in progress · ✅ done · ⏭️ deferred/demo-
 
 | # | Slice | Status | Retires the risk of… | Target |
 |---|---|---|---|---|
-| 1 | Walking skeleton (ADK↔MCP↔ClickHouse↔deploy, 10 rows) | 🟳 | *The fatal integration* | Day 2 |
+| 1 | Walking skeleton (ADK↔MCP↔ClickHouse↔deploy, 13 rows) | ✅* | *The fatal integration* | Day 2 |
 | 2 | Corpus ETL (parsed dataset → tree → NRC score → embed → load) | ⬜ | Data availability + no-drift | Day 5 |
 | 3 | Percentile + filter-first vector query layer | ⬜ | "Is the comparative claim real & fast?" | Day 8 |
 | 4 | Interactive map UI (SQL-backed drill-down + brush) | ⬜ | Design + "every pixel is a query" | Day 11 ← *complete product* |
@@ -34,23 +34,21 @@ Legend: ⬜ not started · 🟳 in progress · ✅ done · ⏭️ deferred/demo-
 | 7 | Hardening + demo video + submission | ⬜ | Disqualifiers | Day 17, submit |
 
 **Milestone:** a complete, demo-able product exists after **Slice 4**. Slices 5–6 deepen it; Slice 7 is non-optional.
+*Slice 1 = ✅ locally (real live queries verified); ⬜ cloud deploy (Agent Engine/Cloud Run) still pending — can happen anytime before Slice 7, not blocking Slice 2+.
 
 ---
 
 ## 📍 Where we are right now
 
-**Last session:** 2026-08-21 (Session 3 — cloud provisioning)
-**Done so far:** ClickHouse Cloud service created, schema + 10-row seed applied (user confirmed in console). Switched GCP accounts (fresh trial), new project `project-7acae5d3-1b92-4913-971` fully provisioned: billing confirmed, ADC set, Vertex AI + Cloud Run + Secret Manager APIs enabled.
-**Next action:** get ClickHouse host + password into `agent/.env` (plus `GOOGLE_CLOUD_PROJECT=project-7acae5d3-1b92-4913-971`), then run the **first live query** end-to-end to finish Slice 1.
-**Blocked on:** ClickHouse host + password only — everything else needed for Slice 1's live round-trip is now in place.
+**Last session:** 2026-08-22 (Session 4 — Slice 1 live verification, COMPLETE)
+**Done so far:** Slice 1 fully verified live — real questions, real ClickHouse queries, real Gemini/Vertex answers, through both the agent directly and the Next.js UI's actual API route. Found and fixed 4 real bugs (see Session 4 log). Both dev servers are running right now: agent on **localhost:8000**, web UI on **localhost:3000** — open the UI in a browser to see it live.
+**Next action:** either (a) deploy to Cloud Run/Agent Engine for a public URL, or (b) move on to **Slice 2 (corpus ETL)** — resolve Q1 (dataset choice) first. Deploy is not blocking Slice 2; can be done anytime before Slice 7.
+**Blocked on:** nothing. All Slice-1 blockers are cleared.
 
 **IMMEDIATE NEXT STEP (start of next session):**
-1. Get ClickHouse **host** + **password** from the Cloud console "Connect" screen (user has this; needs to share or fill `agent/.env` directly — copy from `agent/.env.example`).
-2. Fill `agent/.env`: `CLICKHOUSE_HOST`, `CLICKHOUSE_PASSWORD`, `GOOGLE_CLOUD_PROJECT=project-7acae5d3-1b92-4913-971`, `GOOGLE_CLOUD_LOCATION=us-central1`.
-3. Run: `cd agent && uv run uvicorn server:app --reload --port 8080` (venv + deps already installed from Session 2 — `agent/.venv` exists).
-4. Smoke test: `curl -s localhost:8080/ask -H "content-type: application/json" -d "{\"message\":\"What is the average conflict of the scenes?\"}"` → expect an answer + `sql_shown` containing a real SELECT.
-5. If it works → Slice 1 is DONE. Update this file, commit, move to Slice 2 (corpus ETL — first resolve Q1 dataset choice).
-6. Also still pending: $50 GCP budget alert (manual, Console), create public GitHub repo.
+1. If servers aren't still running: restart with `cd agent && uv run uvicorn server:app --port 8000` and `cd web && npm run dev`, then open http://localhost:3000.
+2. Decide: deploy now, or move to Slice 2. Recommend Slice 2 first (deploy is mechanical; corpus is the real remaining unknown) — start with the **Q1 spike**: check ScriptBase / ScreenPy / pre-parsed IMSDb for license + quality.
+3. Still pending, non-blocking: $50 GCP budget alert (manual, Console), create public GitHub repo, gcloud CLI's own stale-token quirk (see Session 4 log — doesn't affect the app, only `gcloud` commands like `projects describe`).
 
 ---
 
@@ -63,8 +61,8 @@ Legend: ⬜ not started · 🟳 in progress · ✅ done · ⏭️ deferred/demo-
 | APIs enabled (Vertex AI, Cloud Run, Secret Manager) | ✅ | Enabled on the new project Session 3 |
 | `gcloud` CLI authenticated | ✅ | Active account = `ajaye5016@gmail.com`; ADC quota project set to `project-7acae5d3-1b92-4913-971` |
 | ClickHouse Cloud trial ($300/30-day) | ✅ | Service created, schema + 10-row seed loaded (user confirmed Session 3) |
-| ClickHouse host/password | ⬜ | **Not yet shared with agent** — needed to fill `agent/.env` |
-| ClickHouse MCP server reachable | ⬜ | Verified when live round-trip runs |
+| ClickHouse host/password | ✅ | In `agent/.env` (port **8443**, verified working live) |
+| ClickHouse MCP server reachable | ✅ | Verified live via `uvx mcp-clickhouse`, real queries + real answers |
 | `uv` on PATH (for `uvx mcp-clickhouse`) | ✅ | uv 0.9.30 present |
 | $50 GCP budget alert set | ⬜ | Manual step in Console → Billing → Budgets & alerts (CLI needs an extra API + notification setup, deferred) |
 | Repo scaffold (`agent/ web/ etl/ infra/`) | ✅ | Done Session 2 |
@@ -75,28 +73,32 @@ Legend: ⬜ not started · 🟳 in progress · ✅ done · ⏭️ deferred/demo-
 
 ## 📋 Pending work — code & workflow (detailed)
 
-### Slice 1 — Walking skeleton 🟳
+### Slice 1 — Walking skeleton ✅ (local) / ⬜ (cloud deploy)
 **Code**
 - [x] Repo scaffold: `agent/`, `web/`, `etl/`, `infra/`, root README, LICENSE, .gitignore
 - [x] ClickHouse `script_nodes` DDL → `infra/clickhouse/schema.sql`
-- [x] 10 hand-made seed rows → `infra/clickhouse/seed.sql`
-- [x] ADK agent using the **ClickHouse MCP server's native `run_select_query`** via MCPToolset (read-only by design) — *deviation from plan's custom `run_scoped_sql`, see session log*
+- [x] 13-row seed (all 4 tree levels) → `infra/clickhouse/seed.sql` — **corrected mid-session**, see below
+- [x] ADK agent using the ClickHouse MCP server's **actual** tool name `run_query` via MCPToolset (read-only by design — `CLICKHOUSE_ALLOW_WRITE_ACCESS` never set) — *deviation from plan's custom `run_scoped_sql`, kept*
 - [x] Next.js one page + `/api/ask` proxy; renders answer + **"show SQL"** + raw data
 - [x] FastAPI adapter (`server.py`) shaping `{answer, sql_shown, data}` — runs locally, deployable to Cloud Run
-- [x] `.env.example` for agent + web; secrets kept out of repo
-- [ ] Apply schema + seed to a live ClickHouse Cloud service *(needs creds)*
-- [ ] Deploy agent (Agent Engine or Cloud Run) + web (Cloud Run/Vercel) *(needs creds)*
+- [x] `.env.example` for agent + web; secrets kept out of repo; `.env`/`.env.local` populated and working
+- [x] `python-dotenv` loads `.env` at process start (was missing — see bugs below)
+- [x] Applied schema + corrected seed to the live ClickHouse Cloud service
+- [ ] Deploy agent (Agent Engine or Cloud Run) + web (Cloud Run/Vercel) — **still local only**
 - [ ] Secrets in Secret Manager *(at deploy)*
 
 **Workflow / verify**
 - [x] Offline unit tests for the `{answer, sql_shown, data}` parser — **4/4 pass**
 - [x] Web build + typecheck clean (`npm run build`)
 - [x] Agent + server modules import & construct (`LlmAgent` + `MCPToolset`, Runner + routes)
-- [ ] Live: `curl /ask` → response contains a DB value + `sql_shown` *(needs creds)*
-- [ ] Kill ClickHouse → UI shows honest error, **not** a fake number *(needs creds)*
-- [ ] Public URL loads end-to-end *(needs deploy)*
+- [x] **Live, real queries verified** (both agent-direct and through the Next.js `/api/ask` proxy):
+  - "average conflict of the scenes" → 0.61, correct, `sql_shown` populated
+  - "lowest valence scene" → "INT. LAB - DAWN" -0.32, correct
+  - "how many scenes in each act" → 2/2/2 across 3 acts, correct, after two real bugs fixed (below)
+- [x] Honest-failure behavior **observed for real** (not simulated): a ClickHouse Cloud cold-start timeout caused a genuine failure, and the agent said "couldn't retrieve the data" rather than fabricating a number — the core anti-fabrication invariant holds under a real failure, not just a designed test
+- [ ] Public URL loads end-to-end *(needs deploy — not done this session)*
 
-**Risk retired when:** the whole spine round-trips live. *Code path proven to construct; the live query is the remaining gate.*
+**Risk retired:** the whole spine round-trips live, verified with real evidence, twice, through both the agent directly and the actual browser-facing API route.
 
 ### Slice 2 — Corpus ETL ⬜
 - [ ] **Spike (do first):** confirm parsed dataset + license (Q1) — ScriptBase / ScreenPy / pre-parsed IMSDb
@@ -173,6 +175,23 @@ Legend: ⬜ not started · 🟳 in progress · ✅ done · ⏭️ deferred/demo-
 ## 🗒️ Session log
 
 *(Newest first. Each session: what changed, decisions, what's next.)*
+
+### Session 4 — 2026-08-22 — Slice 1 live verification (COMPLETE) — 4 real bugs found & fixed
+Picked up with `.env` filled in by the user. Found and fixed, in order:
+
+1. **`.env` was never loaded into the process at all.** `config.py`/`server.py` only used `os.getenv()`, and nothing called a dotenv loader — so every `.env` value (ClickHouse creds, GCP project, the Vertex flag) had been silently ineffective since Slice 1 was first written. **Fix:** added `python-dotenv`; `load_dotenv()` now runs at the top of `server.py` (before the agent module imports, since `agent.py` builds `root_agent` at import time) and again in `config.py` for any other future entrypoint (ETL, deploy scripts).
+2. **`.env` had `GOOGLE_GENAI_USE_VERTEXAI=FALSE` plus a `GOOGLE_API_KEY`** — someone had worked around an earlier auth error by switching to the direct Gemini API (AI Studio) instead of fixing Vertex auth. This silently violates the hackathon's hard "Google Cloud/Vertex AI only" rule. **Fix:** flipped to `TRUE`, removed the API key — auth now goes through ADC (already confirmed working) as designed.
+3. **The `project-7acae5d3-1b92-4913-971` GCP project turned out to be an AI-Studio-auto-provisioned project**, not a normal Console project — `gcloud projects describe`/`services list` gave permission-denied for it under the CLI's own token even though `services enable` had worked earlier. Root cause turned out to be a **separate, real gcloud bug**: `gcloud config` reported the active account as `ajaye5016@gmail.com`, but the actual CLI OAuth token resolved to the **old** account `ajayelika9010@gmail.com` (confirmed via `/oauth2/v1/userinfo`). This is a `gcloud` CLI credential-cache quirk, **not an ADC problem** — verified ADC independently resolves correctly to `ajaye5016@gmail.com`, and a direct `curl` to the Vertex AI `generateContent` endpoint using the ADC token **succeeded** ("OK" response). So: the app works fine; only ad-hoc `gcloud` CLI introspection commands on this project are unreliable. Non-blocking, left as a known quirk — fixable later with `gcloud auth revoke` + clean re-login if it ever matters.
+4. **Wrong ClickHouse MCP tool name.** `events.py`/`agent.py` assumed the tool was called `run_select_query` (a guess from documentation), but the actual installed `mcp-clickhouse` package registers it as **`run_query`** (confirmed by reading its source in the `uvx` ephemeral cache: `Tool.from_function(run_query_async, name="run_query")`, arg name `query`, read-only unless `CLICKHOUSE_ALLOW_WRITE_ACCESS` is set — which we never set). This silently broke the `sql_shown`/`data` "show your work" contract even though queries were actually running correctly. **Fix:** corrected the constant in `events.py`, the instruction text in `agent.py`, and the test fixtures.
+
+Also found and fixed two **data/prompt correctness bugs** via live testing (not integration bugs — the pipe worked, the content was wrong):
+
+5. **Seed data violated the schema's own tree invariant.** `seed.sql` had scenes pointing directly at acts, skipping the `sequence` (level 1) tier the schema declares — so a natural 3-hop scene→sequence→act join the model correctly attempted returned zero rows. **Fix:** rewrote `seed.sql` to properly populate all 4 levels (13 rows: 1 film → 3 acts → 3 sequences → 6 scenes), reloaded live via ClickHouse's HTTP interface (`TRUNCATE` + `INSERT`, comments stripped — ClickHouse's `VALUES` parser chokes on inline `--` comments between tuples). Spot-verified the parent-equals-`AVG(children)` invariant holds exactly on the reloaded data.
+6. **Agent's hand-written schema instruction was incomplete/wrong**, causing two follow-on mistakes: (a) it omitted `parent_id`/`node_id`, so the model initially claimed no parent-child relationship existed at all; (b) after that was fixed, the model grouped an aggregate query by `slug` (correct for scenes, but scenes-only — empty at higher levels) which silently merged 3 distinct acts into one bucket. **Fix:** added `parent_id`/`node_id` to the instruction, added a `list_tables`-first fallback for schema drift, and an explicit "group by `node_id` not `slug` above scene level" rule.
+
+**End state, verified with real evidence (not assumed):** three distinct live questions, asked through *both* the agent directly and the actual Next.js `/api/ask` route the browser UI calls, all correct: avg conflict (0.61), lowest-valence scene ("INT. LAB - DAWN"), and scenes-per-act (2/2/2 across 3 acts) — each with `sql_shown` populated with the real SQL Gemini wrote. Also observed a **genuine** (not staged) ClickHouse Cloud cold-start timeout, where the agent correctly reported "couldn't retrieve the data" instead of fabricating a number — the core anti-fabrication design invariant held under a real failure.
+**Both dev servers left running:** agent on `localhost:8000`, web on `localhost:3000`.
+**Not done this session:** cloud deployment (Cloud Run/Agent Engine) — app is fully verified but still local-only.
 
 ### Session 3 — 2026-08-21 — Cloud provisioning
 - **ClickHouse Cloud:** service created (user chose 1 replica, min 16GiB/4vCPU, max capped ~32GiB/8vCPU to limit runaway autoscale cost, TDE off, crash reports off). Schema (`infra/clickhouse/schema.sql`) and 10-row seed (`seed.sql`) applied via the Cloud SQL console — user confirmed success.
