@@ -15,18 +15,33 @@ Built for the **Agentic Cinema hackathon — ClickHouse track**.
 > **Design invariant:** every number the user sees comes from a live SQL query. Numbers are SQL
 > aggregates; the LLM only writes prose and embeddings. No client-side analytics on cached data.
 
+![Architecture diagram](docs/architecture.svg)
+
+Every request-time path queries ClickHouse directly; only the conversational `/ask` route also
+calls Gemini — the chart's `/arc` and `/films` endpoints skip the LLM entirely, since firing an
+LLM call on every hover/drill would be slow, costly, and non-deterministic for what's just a
+parameterized SELECT. The offline ETL pipeline (dashed) is the only place embeddings and
+summaries get generated, run once per corpus film, never at request time.
+
+## Live
+
+- **App:** https://agent-cinema-web-742393615246.us-central1.run.app
+- **Agent API:** https://screenplay-agent-742393615246.us-central1.run.app
+
+Both run on Cloud Run (`us-central1`), backed by ClickHouse Cloud and Vertex AI.
+
 ## Repository layout
 
-| Path                   | What                                                                                                  |
-| ---------------------- | ----------------------------------------------------------------------------------------------------- |
-| `agent/`               | Python ADK agent + thin FastAPI adapter (`server.py`). Deploys to Vertex AI Agent Engine / Cloud Run. |
-| `web/`                 | Next.js frontend. Deploys to Cloud Run (or Vercel).                                                   |
-| `etl/`                 | Offline corpus pipeline (parse → tree → NRC score → embed → load). _Slice 2._                         |
-| `infra/clickhouse/`    | `schema.sql` (the `script_nodes` table) + `seed.sql` (Slice-1 skeleton data).                         |
-| `docs/plans/`          | The implementation spec.                                                                              |
-| `features/PROGRESS.md` | Living build tracker — **read this first** to see current state.                                      |
+| Path                   | What                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------ |
+| `agent/`               | Python ADK agent + FastAPI adapter (`server.py`): the conversational endpoint (`/ask`), the direct-SQL percentile/similarity tools (`tools.py`), and the chart data endpoints (`data_api.py`, `/films` + `/arc`). Deploys to Cloud Run via `Dockerfile` / `deploy.sh`. |
+| `web/`                 | Next.js frontend: a Q&A page (`/`) and the interactive structural/emotional map (`/map`). Deploys to Cloud Run via `Dockerfile`.                                                    |
+| `etl/`                 | Offline corpus pipeline (`screenplay_etl/`): IMSDb fetch → scene parse → NRC VAD score → Vertex embed → Gemini summarize → ClickHouse load. Run with `uv run python -m screenplay_etl.run` from `etl/`.                        |
+| `infra/clickhouse/`    | `schema.sql` (the `script_nodes` table) + `seed.sql` (Slice-1 skeleton data — superseded by the real ETL-loaded corpus once Slice 2 finishes).                          |
+| `docs/plans/`          | The implementation spec.                                                                               |
+| `features/PROGRESS.md` | Living build tracker — **read this first** to see current state.                                       |
 
-## Quick start (Slice 1 skeleton)
+## Quick start (local dev)
 
 Prerequisites: a **ClickHouse Cloud** service, a **Google Cloud** project with Vertex AI enabled, and
 `gcloud auth application-default login` completed.
@@ -49,8 +64,26 @@ npm install
 npm run dev                  # http://localhost:3000
 ```
 
-Ask _"What is the average conflict of the scenes?"_ — the agent turns it into a `SELECT` run through
-the ClickHouse MCP server, and the UI shows both the answer and the SQL that produced it.
+Ask _"What is the average conflict of the scenes?"_ on `/` — the agent turns it into a `SELECT` run
+through the ClickHouse MCP server, and the UI shows both the answer and the SQL that produced it.
+Visit `/map` to explore the interactive structural/emotional chart: pick a film, drill act → sequence
+→ scene, every point backed by a live query shown in its own "Show SQL" panel.
+
+### Loading the corpus (Slice 2)
+
+`/map` and the percentile/similarity tools need real films loaded. From `etl/`:
+
+```bash
+cp ../agent/.env .env   # or point at the same ClickHouse creds another way
+uv sync
+uv run python -m screenplay_etl.run          # loads the curated ~25-film list (films.py)
+uv run python -m screenplay_etl.run --verify # checks the AVG(children) invariant, row counts, embedding dims
+```
+
+Resumable by default — re-running skips films already in ClickHouse (`--force` to reprocess).
+Scoring uses the **NRC VAD Lexicon** (Mohammad, NRC Canada) — free for non-commercial research use;
+the lexicon file itself is downloaded to `etl/data/` (gitignored) rather than committed, per its own
+terms. See `etl/screenplay_etl/lexicon.py` for the download link if `etl/data/` is missing.
 
 ### Testing the agent endpoint
 
@@ -104,9 +137,31 @@ gcloud config get-value project
 
 The project ID in `.env` must match your actual GCP project that has **Vertex AI API enabled**.
 
+## Deployment
+
+Both `agent/` and `web/` deploy to Cloud Run as plain Docker containers:
+
+```bash
+cd agent && bash deploy.sh   # enables APIs, stores CLICKHOUSE_PASSWORD in Secret Manager, deploys
+cd web && gcloud run deploy agent-cinema-web --source=. --region=us-central1 \
+  --allow-unauthenticated --set-env-vars="AGENT_URL=<the agent's Cloud Run URL>"
+```
+
+See `features/PROGRESS.md`'s Session 5 log for the IAM grants a fresh/auto-provisioned GCP project
+needs before `gcloud run deploy --source` will succeed (Cloud Build's default service account isn't
+always pre-authorized to read build sources or push to Artifact Registry on such projects).
+
+## Attribution
+
+Scene valence/arousal scoring uses the **NRC Valence, Arousal, and Dominance (VAD) Lexicon**
+(Mohammad, 2018/2025), © National Research Council Canada, used here for non-commercial research
+under its terms — see https://saifmohammad.com/WebPages/nrc-vad.html. Only derived per-scene scores
+are stored; the lexicon itself is never redistributed.
+
 ## Status
 
-See [`features/PROGRESS.md`](features/PROGRESS.md). Currently: **Slice 1 — walking skeleton.**
+See [`features/PROGRESS.md`](features/PROGRESS.md). Currently: **Slices 1, 3, 4 complete; Slice 2
+(corpus ETL) finishing its full load; a complete, demo-able product already exists.**
 
 ## License
 

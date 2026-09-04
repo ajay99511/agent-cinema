@@ -72,6 +72,35 @@ def test_ignores_non_sql_tool_and_blank_text():
     assert reply.answer == "real answer"
 
 
+def test_captures_sql_from_a_native_function_tool_response():
+    # scene_percentiles/similar_scenes (tools.py) aren't the MCP run_query tool, so their
+    # SQL comes back inside the response payload's "sql" list, not the call's args.
+    events = [
+        _event(_call("scene_percentiles", {"script_id": 100, "node_id": 100163})),
+        _event(_response("scene_percentiles", {
+            "valence_percentile": 21.1, "cohort_n": 190,
+            "sql": ["SELECT level, genre FROM script_nodes WHERE node_id = 100163", "SELECT valence FROM script_nodes WHERE genre = 'drama'"],
+        })),
+        _event(_text("This scene is in the 21st percentile for valence.")),
+    ]
+    reply = extract_reply(events)
+    assert reply.sql_shown == [
+        "SELECT level, genre FROM script_nodes WHERE node_id = 100163",
+        "SELECT valence FROM script_nodes WHERE genre = 'drama'",
+    ]
+    assert reply.data == [{"valence_percentile": 21.1, "cohort_n": 190, "sql": [
+        "SELECT level, genre FROM script_nodes WHERE node_id = 100163",
+        "SELECT valence FROM script_nodes WHERE genre = 'drama'",
+    ]}]
+
+
+def test_function_response_without_sql_key_is_not_captured():
+    events = [_event(_response("list_tables", {"tables": ["script_nodes"]}))]
+    reply = extract_reply(events)
+    assert reply.sql_shown == []
+    assert reply.data == []
+
+
 def test_empty_events_yield_empty_reply():
     reply = extract_reply([])
     assert reply.answer == ""

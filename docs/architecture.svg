@@ -1,0 +1,89 @@
+<svg viewBox="0 0 960 620" xmlns="http://www.w3.org/2000/svg" role="img"
+     aria-label="Architecture: browser talks to Next.js, which calls the ADK agent on Cloud Run; the agent queries ClickHouse directly for every path but only calls Gemini on the conversational route; a separate offline ETL pipeline is the only place that writes to ClickHouse or calls Vertex embeddings.">
+  <defs>
+    <marker id="arrow-live" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1f6feb" />
+    </marker>
+    <marker id="arrow-ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8250df" />
+    </marker>
+    <marker id="arrow-offline" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6e7781" />
+    </marker>
+  </defs>
+
+  <style>
+    .box { fill: none; stroke: #1a1a1a; stroke-width: 1.5; }
+    .label { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 15px; fill: #1a1a1a; font-weight: 600; }
+    .sublabel { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; fill: #444; }
+    .arrow-label { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; }
+    .live { stroke: #1f6feb; fill: #1f6feb; }
+    .ai { stroke: #8250df; fill: #8250df; }
+    .offline { stroke: #6e7781; fill: #6e7781; stroke-dasharray: 5,4; }
+  </style>
+
+  <!-- Boxes -->
+  <rect class="box" x="380" y="20" width="200" height="50" rx="6"/>
+  <text class="label" x="480" y="50" text-anchor="middle">Browser</text>
+
+  <rect class="box" x="360" y="120" width="240" height="70" rx="6"/>
+  <text class="label" x="480" y="145" text-anchor="middle">Next.js — Cloud Run</text>
+  <text class="sublabel" x="480" y="163" text-anchor="middle">/ (Q&amp;A)  ·  /map (chart)</text>
+
+  <rect class="box" x="360" y="250" width="240" height="90" rx="6"/>
+  <text class="label" x="480" y="278" text-anchor="middle">ADK Agent — Cloud Run</text>
+  <text class="sublabel" x="480" y="296" text-anchor="middle">/ask · /arc · /films</text>
+  <text class="sublabel" x="480" y="312" text-anchor="middle">MCP + native tools</text>
+
+  <rect class="box" x="20" y="140" width="260" height="50" rx="6"/>
+  <text class="label" x="150" y="170" text-anchor="middle">IMSDb (public text)</text>
+
+  <rect class="box" x="20" y="250" width="260" height="90" rx="6"/>
+  <text class="label" x="150" y="278" text-anchor="middle">ETL — offline, resumable</text>
+  <text class="sublabel" x="150" y="296" text-anchor="middle">parse → NRC VAD score</text>
+  <text class="sublabel" x="150" y="312" text-anchor="middle">→ embed → summarize → load</text>
+
+  <rect class="box" x="140" y="450" width="280" height="90" rx="6"/>
+  <text class="label" x="280" y="480" text-anchor="middle">ClickHouse Cloud</text>
+  <text class="sublabel" x="280" y="498" text-anchor="middle">script_nodes — one table,</text>
+  <text class="sublabel" x="280" y="514" text-anchor="middle">corpus + user drafts</text>
+
+  <rect class="box" x="580" y="450" width="280" height="90" rx="6"/>
+  <text class="label" x="720" y="480" text-anchor="middle">Vertex AI</text>
+  <text class="sublabel" x="720" y="498" text-anchor="middle">Gemini generate_content</text>
+  <text class="sublabel" x="720" y="514" text-anchor="middle">+ embed_content (ETL only)</text>
+
+  <!-- Live request-path arrows -->
+  <line class="live" x1="480" y1="70" x2="480" y2="118" marker-end="url(#arrow-live)"/>
+  <text class="arrow-label live" x="492" y="98">HTTP</text>
+
+  <line class="live" x1="440" y1="190" x2="440" y2="248" marker-end="url(#arrow-live)"/>
+  <text class="arrow-label live" x="330" y="222">ask NL question</text>
+
+  <line class="live" x1="530" y1="190" x2="530" y2="248" marker-end="url(#arrow-live)"/>
+  <text class="arrow-label live" x="540" y="222">fetch chart data</text>
+
+  <line class="live" x1="420" y1="340" x2="290" y2="448" marker-end="url(#arrow-live)"/>
+  <text class="arrow-label live" x="300" y="410">live SQL (every path)</text>
+
+  <line class="ai" x1="560" y1="340" x2="690" y2="448" marker-end="url(#arrow-ai)"/>
+  <text class="arrow-label ai" x="600" y="410">Gemini call (/ask only)</text>
+
+  <!-- Offline ETL arrows -->
+  <line class="offline" x1="150" y1="190" x2="150" y2="248" marker-end="url(#arrow-offline)"/>
+  <text class="arrow-label offline" x="160" y="222">fetch text</text>
+
+  <line class="offline" x1="140" y1="335" x2="200" y2="448" marker-end="url(#arrow-offline)"/>
+  <text class="arrow-label offline" x="60" y="410">load corpus</text>
+
+  <line class="offline" x1="260" y1="300" x2="620" y2="448" marker-end="url(#arrow-offline)"/>
+  <text class="arrow-label offline" x="380" y="360">embed + summarize</text>
+
+  <!-- Legend -->
+  <line class="live" x1="20" y1="580" x2="55" y2="580"/>
+  <text class="sublabel" x="62" y="584">live request path (ClickHouse)</text>
+  <line class="ai" x1="20" y1="600" x2="55" y2="600"/>
+  <text class="sublabel" x="62" y="604">live request path (Gemini)</text>
+  <line class="offline" x1="330" y1="580" x2="365" y2="580"/>
+  <text class="sublabel" x="372" y="584">offline ETL (one-time per film, resumable)</text>
+</svg>

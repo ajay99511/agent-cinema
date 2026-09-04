@@ -28,6 +28,7 @@ from pydantic import BaseModel
 
 from screenplay_agent.agent import root_agent
 from screenplay_agent.events import extract_reply
+from screenplay_agent.data_api import arc_data, list_films
 
 APP_NAME = "screenplay-analyst"
 
@@ -56,15 +57,34 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/films")
+async def films() -> dict:
+    return list_films()
+
+
+@app.get("/arc")
+async def arc(script_id: int, level: int, parent_id: int | None = None) -> dict:
+    """Direct-SQL data for the interactive map chart — see data_api.py module docstring
+    for why this bypasses the LLM agent entirely."""
+    return arc_data(script_id, level, parent_id)
+
+
 @app.post("/ask")
 async def ask(req: AskRequest) -> dict:
     user_id = "web"
     session_id = req.session_id or str(uuid.uuid4())
 
-    # InMemorySessionService is idempotent-friendly: ensure the session exists.
-    await _session_service.create_session(
+    # create_session() is NOT idempotent — it raises AlreadyExistsError on a repeat
+    # session_id rather than being a no-op (confirmed the hard way: this crashed every
+    # second-question-onward request in a real multi-turn conversation with a 500, since
+    # the frontend correctly reuses the session_id it got back from the first /ask call).
+    # get_session() returns None instead of raising, so check first and only create if new.
+    if await _session_service.get_session(
         app_name=APP_NAME, user_id=user_id, session_id=session_id
-    )
+    ) is None:
+        await _session_service.create_session(
+            app_name=APP_NAME, user_id=user_id, session_id=session_id
+        )
 
     content = types.Content(role="user", parts=[types.Part(text=req.message)])
 

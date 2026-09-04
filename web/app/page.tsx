@@ -48,7 +48,11 @@ export default function Home() {
       <h1>Screenplay Structural Map</h1>
       <p className="subtitle">
         Ask about the screenplay corpus. Every number is produced by a live ClickHouse query —
-        expand “SQL” to see it.
+        expand “SQL” to see it. Or explore the{" "}
+        <a href="/map" style={{ color: "var(--accent)" }}>
+          interactive structural map
+        </a>
+        .
       </p>
 
       <form

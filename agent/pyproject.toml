@@ -17,6 +17,10 @@ dependencies = [
     "uvicorn[standard]>=0.30.0",
     "pydantic>=2.7.0",
     "python-dotenv>=1.0.0",
+    # Direct client for the Slice 3 percentile/similar-scenes tools (tools.py) — separate
+    # from the MCP subprocess used for ad-hoc NL-to-SQL, since these are hand-written
+    # parameterized queries called directly by Python, not by the LLM writing SQL.
+    "clickhouse-connect>=0.8.0",
 ]
 
 [dependency-groups]

@@ -24,6 +24,10 @@ dist/
 .gcloud/
 *.log
 
+# ETL working data — the NRC VAD lexicon's own terms forbid redistribution, and raw
+# screenplay text is fetched fresh from IMSDb each run, never committed.
+etl/data/
+
 # OS
 .DS_Store
 Thumbs.db

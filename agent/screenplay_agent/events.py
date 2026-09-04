@@ -9,6 +9,13 @@ The frontend contract is ``{answer, sql_shown, data}``:
 This module is deliberately PURE and framework-agnostic: it reads the documented event
 shape via ``getattr`` duck-typing, so it can be unit-tested with plain stand-in objects
 and never needs the cloud. See ``tests/test_events.py``.
+
+Besides the MCP ``run_query`` tool, Slice 3 added native FunctionTools (``scene_percentiles``,
+``similar_scenes`` — tools.py) that also run live ClickHouse queries but return a plain dict
+rather than taking raw SQL as an argument. Rather than hardcode their names here, any tool
+response that includes a ``"sql"`` key (a list of the statements it ran) has those folded into
+``sql_shown`` too — so a future tool built the same way is picked up automatically, and the
+"every number came from a visible live query" UI claim stays true as the tool surface grows.
 """
 
 from __future__ import annotations
@@ -71,9 +78,13 @@ def extract_reply(events: Iterable[Any]) -> AgentReply:
                     reply.sql_shown.append(sql)
 
             response = getattr(part, "function_response", None)
-            if response is not None and getattr(response, "name", None) == SQL_TOOL_NAME:
+            if response is not None:
+                name = getattr(response, "name", None)
                 payload = getattr(response, "response", None)
-                if payload is not None:
+                if name == SQL_TOOL_NAME and payload is not None:
+                    reply.data.append(payload)
+                elif isinstance(payload, dict) and isinstance(payload.get("sql"), list):
+                    reply.sql_shown.extend(s for s in payload["sql"] if isinstance(s, str) and s.strip())
                     reply.data.append(payload)
 
             text = getattr(part, "text", None)

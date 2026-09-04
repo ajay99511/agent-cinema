@@ -1,0 +1,18 @@
+[project]
+name = "screenplay-etl"
+version = "0.1.0"
+description = "Offline corpus ETL: IMSDb screenplay -> scored, embedded, summarized script_nodes rows"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "google-genai>=1.0.0",
+    "clickhouse-connect>=0.8.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.27.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["screenplay_etl"]
